@@ -2,11 +2,13 @@ from sklearn.decomposition import PCA as PCA
 import scipy.io
 import numpy as np
 import inspect
-from py_utils import utils
 
-patient_nr = 11
-scid = 'nsc'
-n_components = 5
+import sys
+sys.path.append('/home/ov/python/py_utils')
+import utils
+
+patient_nr = 37
+scid = 'scp'
 
 pwd = '/home/ov/preprocessed_waves/'
 
@@ -32,12 +34,21 @@ xs = fitted[:, 0]
 ys = fitted[:, 1]
 zs = fitted[:, 2]
 
+utils.plot_3d(xs, ys, zs,
+              title='NFPAT{} {} PCA projection'.format(patient_nr, scid),
+              xlabel='PC1',
+              ylabel='PC2',
+              zlabel='PC3')
+
+n_components = int(input('Type the number of components to split into: '))
+
 cluster_means, clusters, ns, ks = utils.gaussian_mixture_pca_projections(
                                      fitted, concatenated_waves,
                                      n_components, patient_nr, scid,
                                      with_mahal=False)
 
 
+clusters = np.asarray(clusters)
 
 # Cleaning (only if additional clustering was needed):
 if ns is not None:
@@ -47,7 +58,6 @@ if ns is not None:
     # Means:
     cluster_means = np.delete(cluster_means, ns, axis=0)
     # Clusters:
-    clusters = np.asarray(clusters)
     clusters = np.delete(clusters, ns, axis=0)
 
     assert cluster_means.shape[0] == clusters.shape[0]
@@ -57,8 +67,10 @@ if ns is not None:
 pwd_extracted = pwd + 'extracted/' +'nfpat' + str(patient_nr) + '.icp.' + scid
 pwd_means = pwd_extracted + '_means'
 pwd_clusters = pwd_extracted + '_clusters'
+assert cluster_means.shape[0] == clusters.shape[0]
 np.savetxt(pwd_means, cluster_means)
 np.save(pwd_clusters, clusters)
+
 print('\nMeans and clusters saved as: \n {} in {}\n {} in {}'.format(cluster_means.shape,
                                                                      pwd_means,
                                                                      clusters.shape,
