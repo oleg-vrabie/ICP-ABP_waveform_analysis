@@ -7,11 +7,13 @@ sys.path.append('/home/ov/python/py_utils')
 import utils
 
 # Parameters:
-patient_list = [7, 10, 11, 12, 18, 23, 37]
-scid_list = ['scp']
+#patient_list = [7, 10, 11, 12, 18, 23, 37]
+#scid_list = ['scp']
+
 pwd = '/home/ov/preprocessed_waves/'
 
-pwd_concat = pwd + 'entire_nsc_data.npy'
+pwd_concat = pwd + 'entire_nsc_data.npy'    # nsc
+#pwd_concat = pwd + 'entire_scp_data.npy'    # scp
 concatenated_waves = np.load(pwd_concat)
 
 print(concatenated_waves.shape)
