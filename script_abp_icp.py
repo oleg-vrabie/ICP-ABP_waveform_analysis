@@ -13,7 +13,7 @@ import utils
 import matplotlib.pyplot as plt
 # =============================================================================
 # Parameters
-patient_nr = 7
+patient_nr = 10
 scid = 'scp'
 wave_type = 'abp'
 pwd = '/home/ov/data/stacked/'
@@ -31,7 +31,7 @@ print('Fitted PCA: {}'.format(fitted.shape))
 xs = fitted[:, 0]
 ys = fitted[:, 1]
 zs = fitted[:, 2]
-
+"""
 utils.plot_3d_mod(xs, ys, zs,
                     title='',
                     s=1,
@@ -40,9 +40,9 @@ utils.plot_3d_mod(xs, ys, zs,
                     ylabel = 'PC2',
                     zlabel = 'PC3',
                     add_info = 'PAT{} ({})'.format(patient_nr, scid))
-
 if input('Satisfied? (y|N)\n') != 'y':
     raise Exception('Not satisified :(')
+"""
 # =============================================================================
 # Gaussian Mixture Models and, if needed, additional clustering
 n_components = int(input('Type the number of components to split into: '))
@@ -52,7 +52,9 @@ fitted_copy = fitted
 cluster_means, clusters, ns, ks, clusters_list = utils.gaussian_mixture_pca_projections(
                                                 fitted, waves, n_components,
                                                 npat=patient_nr, scid=scid,
-                                                wave_type=wave_type)
+                                                wave_type=wave_type,
+                                                n_init=1,
+                                                random_state=120000)
 # =============================================================================
 # Plot random ABP waves and their ICP counterparts
 """
@@ -62,7 +64,6 @@ utils.plot_random_wave_samples(icp_waves, wave_type='icp', seg_type=scid, rand_l
 """
 # =============================================================================
 # Fit-Transforming PCA on acquired waves:
-
 print('\n\nAnalysis of corresponding counterparts:')
 wave_type = 'icp'
 counter_waves = utils.acces_waves_by_type(None, stacked_waves, wave_type)
@@ -102,8 +103,25 @@ for i in range(len(clusters_list)):
                         title3='ABP mean #{}'.format(i+1),
                         title4='ICP mean #{}'.format(i+1))
 
+# =============================================================================
+# Saving ICP waves corresponding to selected ABP means
+if input('\n\nCluster selection? (y|N)\n') == 'y':
+    pwd = pwd + 'selected/trial2/'
+    for wf in range(1, 4):
+        list = [int(x) for x in input('\nGive the index of wf{}(s) separated by space: '.format(wf)).split()]
+        print('You have selected: {}'.format(list))
+        sel_indxx = []
+        for i in list:
+            sel_indxx.extend(clusters_list[i-1])
+        print('Extracted (total wf{}s): {}'.format(wf,len(sel_indxx)))
+        selected_i = counter_waves[sel_indxx]
+        #filename = str(input('Give a filename to save wf{}: '.format(wf)))
+        filename = 'wf{}_{}_pat{}.npy'.format(wf, scid, patient_nr)
+        if sel_indxx != []:
+            np.save(pwd + filename, selected_i)
 
-print(input('To exit, press any key!\n'))
+
+print(input('To exit, press any key!'))
 
 """
     # Gaussian Mixture Models and, if needed, additional clustering
