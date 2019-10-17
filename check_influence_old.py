@@ -13,55 +13,44 @@ import utils
 import matplotlib.pyplot as plt
 import matplotlib
 # =============================================================================
+# Parameters:
+scp_mean = 3
+nsc_mean = 3
+scid = 'scp+nsc'
 pwd = '/home/ov/data/stacked/selected/trial2/'
-scids = ['nsc']
-wfs = [1, 2, 3]
 # =============================================================================
-# Loading waves by scid in waves and by wf in wf_waves
-waves = np.zeros((0))
-wf_types = np.zeros((0))
-for scid in scids:
-    xs_list = []
-    ys_list = []
-    zs_list = []
-    centroids = []
-    for wf in wfs:
-        size = np.load(pwd + 'wf{}_{}.npy'.format(wf, scid)).shape[0]
+# Load clusters:
+clusters_nsc = np.load(pwd + 'nsc_clusters_hdbscan.npy', allow_pickle = True)
+clusters_scp = np.load(pwd + 'scp_clusters_hdbscan.npy', allow_pickle = True)
+print(clusters_scp[scp_mean].shape)
+print(clusters_nsc[nsc_mean].shape)
 
-        if wf_types.shape == (0,):
-            wf_types = np.zeros((size,)) + wf
-        else:
-            wf_types = np.concatenate((wf_types, np.zeros((size,)) + wf))
+fitted_scp = utils.pca_projections(clusters_scp[scp_mean], 3, svd_solver='arpack')
+fitted_nsc = utils.pca_projections(clusters_nsc[nsc_mean], 3, svd_solver='arpack')
 
-        waves = utils.load_waves(pwd + 'wf{}_{}.npy'.format(wf, scid), waves)
-        print('Loaded: wf{}_{}.npy'.format(wf, scid))
+xs_list = []
+ys_list = []
+zs_list = []
 
-        wf_waves = np.zeros((0))
-        wf_waves = utils.load_waves(pwd + 'wf{}_{}.npy'.format(wf, scid), wf_waves)
+xs_list.append(fitted_scp[:, 0])
+xs_list.append(fitted_nsc[:, 0])
+ys_list.append(fitted_scp[:, 1])
+ys_list.append(fitted_nsc[:, 1])
+zs_list.append(fitted_scp[:, 2])
+zs_list.append(fitted_nsc[:, 2])
 
-        fitted = utils.pca_projections(wf_waves, 3, svd_solver='arpack')
-        xs_list.append(fitted[:, 0])
-        ys_list.append(fitted[:, 1])
-        zs_list.append(fitted[:, 2])
-# Test:
-assert wf_types.shape[0] == waves.shape[0]
-
-
-from sklearn.manifold import TSNE
-embedded_waves = TSNE(n_components=3, verbose = 1).fit_transform(waves)
-embedded_waves.shape
-fitted = embedded_waves
-
-
-utils.plot_3d_mod(fitted[:, 0], fitted[:, 1], fitted[:, 2])
 # =============================================================================
 # Plot PCA proj. of ICP corresponding to each wf:
-title = 'Projection of ICP waves corresponding to all {} wfs'.format(scid)
+title = 'Projection of ICP scp&nsc waves from two clusters with same input wfs'
 utils.stack_plot(xs_list, ys_list, zs_list,
-               label_prefix = 'wf',
-               title = title)
+               label_prefix = 'scid',
+               title = title,
+               s = 40)
 # =============================================================================
 # Fit PCA and plot by scid
+fitted = np.concatenate((fitted_scp, fitted_nsc), axis=0)
+waves = np.concatenate((clusters_scp[scp_mean], clusters_nsc[nsc_mean]), axis=0)
+"""
 fitted = utils.pca_projections(waves, 3, svd_solver='arpack')
 print('Fitted PCA: {}'.format(fitted.shape))
 xs = fitted[:, 0]
@@ -78,7 +67,7 @@ figu, axu = utils.plot_3d_mod(xs, ys, zs,
 
 if input('\nSatisfied? (y|N)\n') != 'y':
     raise Exception('Not satisified :(')
-
+"""
 # =============================================================================
 # Gaussian Mixture Models OR HDBSCAN and, if needed, additional clustering *
 decision = input('dbscan or gmm: ')
@@ -89,7 +78,9 @@ if decision == 'gmm':
                                                     fitted, waves, n_components,
                                                     npat=None, scid=scid,
                                                     wave_type='icp',
-                                                    n_init=1)
+                                                    n_init=1,
+                                                    random_state=3)
+    print('That was it.')
 # ______________________________________________________________________________
 elif decision == 'dbscan':
     labels, sub_colors, n_clusters = utils.hdbscan_(fitted)
@@ -109,7 +100,7 @@ elif decision == 'dbscan':
                c=sub_colors,
                cmap=matplotlib.colors.ListedColormap(utils.default_colors, N=N),
                depthshade=False,
-               s=10)
+               s=20)
     ax.set_xlabel('PC1')
     ax.set_ylabel('PC2')
     ax.set_zlabel('PC3')
@@ -123,18 +114,22 @@ elif decision == 'dbscan':
         n_elements = np.unique(sub_colors, return_counts=True)[1][i]
 
         # For the ratios of wfs in the legend
-        total_nr = waves[i==labels].shape[0]/100
-        per1 = round(waves[(i==labels) & (1 == wf_types)].shape[0]/total_nr, 1)
-        per2 = round(waves[(i==labels) & (2 == wf_types)].shape[0]/total_nr, 1)
-        per3 = round(waves[(i==labels) & (3 == wf_types)].shape[0]/total_nr, 1)
+        #total_nr = waves[i==labels].shape[0]/100
+        #per1 = round(waves[(i==labels) & (1 == wf_types)].shape[0]/total_nr, 1)
+        #per2 = round(waves[(i==labels) & (2 == wf_types)].shape[0]/total_nr, 1)
+        #per3 = round(waves[(i==labels) & (3 == wf_types)].shape[0]/total_nr, 1)
 
+        legend_elements.append(Patch(facecolor=utils.default_colors[i],
+                                     edgecolor='black',
+                                     label='{}'.format(n_elements)))
+        """
         legend_elements.append(Patch(facecolor=utils.default_colors[i],
                                      edgecolor='black',
                                      label='{} ({}%|{}%|{}%)'.format(n_elements,
                                                                      per1,
                                                                      per2,
                                                                      per3)))
-
+        """
     legend = ax.legend(handles=legend_elements, loc='upper right')
     plt.show(block=False)
     plt.pause(0.001)
@@ -144,18 +139,21 @@ elif decision == 'dbscan':
     else:
         clusters_list = []
         mean_waves = np.zeros((N, 780))
-        for i in range(N): # -1 because the noise is not included
+        #for i in range(N-1): # -1 because the noise is not included
+        for i in range(N):
             # Mean acquiring:
+            print(i)
             print(waves[i==labels].shape)
             clusters_list.append(waves[i==labels, :])
             mean_waves[i] = np.mean(waves[i==labels], axis=0)
 
-        utils.plot_means_of_clusters(N-1, mean_waves,
-                                     title = '{} Means ({})'.format(scid,
+        utils.plot_means_of_clusters(N, mean_waves,
+                                     title = '{} Means ({}) (1st = noise)'.format(scid,
                                                                     decision))
 
         outfile = pwd + '{}_clusters_hdbscan.npy'.format(scid)
         np.save(outfile, np.asarray(clusters_list), allow_pickle=True)
+        x = np.load(outfile, allow_pickle=True)
         if input('\nSatisfied? (y|N)\n') != 'y':
             raise Exception('Not satisified :(')
 # ______________________________________________________________________________
